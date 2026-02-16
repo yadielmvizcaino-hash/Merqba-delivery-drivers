@@ -1,0 +1,7 @@
+{
+  "name": "Merqba Delivery Drivers",
+  "description": "Aplicación de gestión de entregas para mensajeros en Cuba con integración de mapas y gestión de ganancias.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
