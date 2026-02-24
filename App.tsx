@@ -37,6 +37,12 @@ const useAppStore = () => {
     ));
   };
 
+  const cancelOrder = (orderId: string) => {
+    setOrders(prev => prev.map(o => 
+      o.id === orderId ? { ...o, status: OrderStatus.PENDING } : o
+    ));
+  };
+
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
     setOrders(prev => {
       const updated = prev.map(o => {
@@ -94,6 +100,7 @@ const useAppStore = () => {
     loading,
     refreshOrders,
     acceptOrder,
+    cancelOrder,
     updateOrderStatus,
     requestWithdrawal,
     setDriver
@@ -381,8 +388,6 @@ const Dashboard = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
 
 // 2. My Orders (Active)
 const MyOrders = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
-  const [activeTab, setActiveTab] = useState<'active' | 'pending'>('active');
-
   const handleNextStatus = (order: Order) => {
     let nextStatus: OrderStatus | null = null;
     if (order.status === OrderStatus.ACCEPTED) nextStatus = OrderStatus.IN_TRANSIT;
@@ -390,6 +395,31 @@ const MyOrders = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
     
     if (nextStatus) {
       store.updateOrderStatus(order.id, nextStatus);
+    }
+  };
+
+  const handleUnifyRoute = () => {
+    const launchMaps = (origin: { lat: number, lng: number }) => {
+      const waypoints = store.activeOrders.flatMap(o => [
+        { coords: o.pickupCoords, type: 'pickup' as const },
+        { coords: o.deliveryCoords, type: 'delivery' as const }
+      ]);
+      const url = getUnifiedRouteUrl(origin, waypoints);
+      if (url) window.open(url, '_blank');
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+           launchMaps({ lat: position.coords.latitude, lng: position.coords.longitude });
+        },
+        (error) => {
+           console.warn("Geolocation failed", error);
+           launchMaps({ lat: 23.1136, lng: -82.3666 });
+        }
+      );
+    } else {
+      launchMaps({ lat: 23.1136, lng: -82.3666 });
     }
   };
 
@@ -403,54 +433,42 @@ const MyOrders = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
         </button>
       </header>
 
-      <div className="flex bg-[#1a222e] p-1.5 rounded-2xl mb-8 border border-white/5">
+      {store.activeOrders.length > 0 && (
         <button 
-          onClick={() => setActiveTab('active')}
-          className={`flex-1 py-3.5 text-sm font-bold rounded-xl transition-all ${activeTab === 'active' ? 'bg-yellow-400 text-gray-900 shadow-lg' : 'text-gray-400 hover:text-white'}`}
+          onClick={handleUnifyRoute}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl flex items-center justify-center gap-3 mb-8 font-bold transition-all shadow-lg shadow-blue-900/30 active:scale-[0.98]"
         >
-          En curso
+          <Map size={20} />
+          Unificar recorrido optimizado
         </button>
-        <button 
-           onClick={() => setActiveTab('pending')}
-           className={`flex-1 py-3.5 text-sm font-bold rounded-xl transition-all ${activeTab === 'pending' ? 'bg-yellow-400 text-gray-900 shadow-lg' : 'text-gray-400 hover:text-white'}`}
-        >
-          Pendientes
-        </button>
+      )}
+
+      <div className="space-y-6">
+         {store.activeOrders.length === 0 ? (
+           <div className="flex flex-col items-center justify-center py-20 text-gray-600">
+             <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mb-6 border border-white/5">
+               <Plus size={32} />
+             </div>
+             <p className="text-sm font-medium">No tienes más entregas activas</p>
+           </div>
+         ) : (
+           <div className="space-y-4">
+             {store.activeOrders.map(order => (
+                <ActiveOrderCard 
+                  key={order.id}
+                  order={order} 
+                  onAction={(id, action) => {
+                    if (action === 'next_status') handleNextStatus(order);
+                    if (action === 'cancel') store.cancelOrder(order.id);
+                    if (action === 'map') {
+                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.deliveryCoords.lat},${order.deliveryCoords.lng}`, '_blank');
+                    }
+                  }}
+                />
+             ))}
+           </div>
+         )}
       </div>
-
-      {activeTab === 'active' && (
-        <div className="space-y-6">
-           {store.activeOrders.length === 0 ? (
-             <div className="flex flex-col items-center justify-center py-20 text-gray-600">
-               <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mb-6 border border-white/5">
-                 <Plus size={32} />
-               </div>
-               <p className="text-sm font-medium">No tienes más entregas activas</p>
-             </div>
-           ) : (
-             <div className="space-y-6">
-               {store.activeOrders.map(order => (
-                  <ActiveOrderCard 
-                    key={order.id}
-                    order={order} 
-                    onAction={(id, action) => {
-                      if (action === 'next_status') handleNextStatus(order);
-                      if (action === 'map') {
-                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.deliveryCoords.lat},${order.deliveryCoords.lng}`, '_blank');
-                      }
-                    }}
-                  />
-               ))}
-             </div>
-           )}
-        </div>
-      )}
-
-      {activeTab === 'pending' && (
-        <div className="text-center py-20 text-gray-600">
-          <p className="text-sm font-medium">No hay pedidos pendientes</p>
-        </div>
-      )}
     </div>
   );
 };
