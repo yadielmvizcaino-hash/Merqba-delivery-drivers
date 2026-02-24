@@ -20,11 +20,11 @@ const useAppStore = () => {
 
   // Derive active orders
   const activeOrders = orders.filter(o => 
-    [OrderStatus.ACCEPTED, OrderStatus.IN_TRANSIT].includes(o.status)
+    [OrderStatus.ACCEPTED, OrderStatus.IN_TRANSIT, OrderStatus.DELIVERED].includes(o.status)
   );
 
   const availableOrders = orders.filter(o => o.status === OrderStatus.PENDING);
-  const historyOrders = orders.filter(o => [OrderStatus.DELIVERED, OrderStatus.COMPLETED, OrderStatus.CANCELLED].includes(o.status));
+  const historyOrders = orders.filter(o => [OrderStatus.COMPLETED, OrderStatus.CANCELLED].includes(o.status));
 
   const refreshOrders = () => {
     setLoading(true);

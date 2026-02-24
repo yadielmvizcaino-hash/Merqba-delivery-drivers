@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Navigation, MessageSquare, Camera, Info, Check, Zap, User, Phone, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { MapPin, Navigation, MessageSquare, Camera, Info, Check, Zap, User, Phone, ChevronDown, ChevronUp, Trash2, Package } from 'lucide-react';
 import { Order, OrderStatus } from '../types';
 
 interface ActiveOrderCardProps {
