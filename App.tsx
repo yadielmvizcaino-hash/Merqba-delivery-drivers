@@ -5,9 +5,10 @@ import { Sidebar } from './components/Sidebar';
 import { OrderCard } from './components/OrderCard';
 import { MOCK_DRIVER, MOCK_ORDERS, MOCK_TRANSACTIONS } from './services/mockData';
 import { DriverProfile, Order, OrderStatus, Transaction } from './types';
-import { Filter, RefreshCw, Star, LogOut, ChevronRight, Settings, Trash2, Map, DollarSign, ArrowUpRight, TrendingUp, TrendingDown, Wallet, Clock, Box, Package, X, Search, Menu, MapPin, Navigation } from 'lucide-react';
+import { Filter, RefreshCw, Star, LogOut, ChevronRight, Settings, Trash2, Map, DollarSign, ArrowUpRight, TrendingUp, TrendingDown, Wallet, Clock, Box, Package, X, Search, Menu, MapPin, Navigation, Eye, EyeOff, Mail, Lock, Smartphone, User, RotateCcw, ArrowLeft, Camera, CheckCircle2, Bike, Car, Truck, Bell, Plus } from 'lucide-react';
 import { getUnifiedRouteUrl } from './utils/maps';
 import { CUBA_GEOGRAPHY } from './constants/cuba';
+import { ActiveOrderCard } from './components/ActiveOrderCard';
 
 // --- State Management Simulation (Hook) ---
 // In a real app, this would be Zustand or Redux
@@ -380,7 +381,7 @@ const Dashboard = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
 
 // 2. My Orders (Active)
 const MyOrders = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
-  const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'pending'>('active');
 
   const handleNextStatus = (order: Order) => {
     let nextStatus: OrderStatus | null = null;
@@ -392,119 +393,95 @@ const MyOrders = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
     }
   };
 
-  const simulateAdminCompletion = (orderId: string) => {
-    if(window.confirm("Simulación: ¿Confirmar que la administración ha verificado esta orden? (Esto liberará el pago)")) {
-      store.updateOrderStatus(orderId, OrderStatus.COMPLETED);
-    }
-  };
-
-  const getButtonLabel = (status: OrderStatus) => {
-    switch(status) {
-      case OrderStatus.ACCEPTED: return "Comenzar ruta";
-      case OrderStatus.IN_TRANSIT: return "Confirmar entrega";
-      case OrderStatus.DELIVERED: return "Esperando validación...";
-      default: return "";
-    }
-  };
-
-  const handleUnifyRoute = () => {
-    const launchMaps = (origin: { lat: number, lng: number }) => {
-      const waypoints = store.activeOrders.flatMap(o => [
-        { coords: o.pickupCoords, type: 'pickup' as const },
-        { coords: o.deliveryCoords, type: 'delivery' as const }
-      ]);
-      const url = getUnifiedRouteUrl(origin, waypoints);
-      if (url) window.open(url, '_blank');
-    };
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-           launchMaps({ lat: position.coords.latitude, lng: position.coords.longitude });
-        },
-        (error) => {
-           console.warn("Geolocation failed", error);
-           // Fallback to Havana center
-           launchMaps({ lat: 23.1136, lng: -82.3666 });
-        }
-      );
-    } else {
-      launchMaps({ lat: 23.1136, lng: -82.3666 });
-    }
-  };
-
   return (
-    <div className="p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto">
-       <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-white">Mis Entregas</h1>
-        <div className="flex bg-surfaceHighlight p-1 rounded-lg w-full md:w-auto md:min-w-[300px]">
-          <button 
-            onClick={() => setActiveTab('active')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'active' ? 'bg-surface shadow text-white' : 'text-textMuted'}`}
-          >
-            En Curso ({store.activeOrders.length})
-          </button>
-          <button 
-             onClick={() => setActiveTab('history')}
-             className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'history' ? 'bg-surface shadow text-white' : 'text-textMuted'}`}
-          >
-            Historial
-          </button>
-        </div>
+    <div className="p-6 pb-24 max-w-lg mx-auto min-h-screen bg-background">
+       <header className="mb-8 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white">Mis Entregas Activas</h1>
+        <button className="relative p-2 text-white/80 hover:text-white transition-colors">
+          <Bell size={24} />
+          <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#4ade80] border-2 border-background rounded-full"></span>
+        </button>
       </header>
 
-      {activeTab === 'active' && (
-        <div className="space-y-4">
-           {store.activeOrders.length > 0 && (
-             <button 
-               onClick={handleUnifyRoute}
-               className="w-full md:w-auto md:px-8 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 mb-4 font-medium transition-colors ml-auto shadow-lg shadow-blue-900/20"
-             >
-               <Map size={18} />
-               Ver ruta unificada optimizada
-             </button>
-           )}
+      <div className="flex bg-[#1a222e] p-1.5 rounded-2xl mb-8 border border-white/5">
+        <button 
+          onClick={() => setActiveTab('active')}
+          className={`flex-1 py-3.5 text-sm font-bold rounded-xl transition-all ${activeTab === 'active' ? 'bg-yellow-400 text-gray-900 shadow-lg' : 'text-gray-400 hover:text-white'}`}
+        >
+          En curso
+        </button>
+        <button 
+           onClick={() => setActiveTab('pending')}
+           className={`flex-1 py-3.5 text-sm font-bold rounded-xl transition-all ${activeTab === 'pending' ? 'bg-yellow-400 text-gray-900 shadow-lg' : 'text-gray-400 hover:text-white'}`}
+        >
+          Pendientes
+        </button>
+      </div>
 
+      {activeTab === 'active' && (
+        <div className="space-y-6">
            {store.activeOrders.length === 0 ? (
-             <div className="text-center py-20 text-textMuted bg-surface/50 rounded-xl border border-dashed border-surfaceHighlight">
-               <Map size={48} className="mx-auto mb-4 opacity-50" />
-               No tienes entregas activas.
+             <div className="flex flex-col items-center justify-center py-20 text-gray-600">
+               <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mb-6 border border-white/5">
+                 <Plus size={32} />
+               </div>
+               <p className="text-sm font-medium">No tienes más entregas activas</p>
              </div>
            ) : (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             <div className="space-y-6">
                {store.activeOrders.map(order => (
-                  <div key={order.id} className="relative h-full">
-                    <OrderCard 
-                      order={order} 
-                      onAction={() => handleNextStatus(order)}
-                      actionLabel={getButtonLabel(order.status)}
-                    />
-                    {order.status === OrderStatus.DELIVERED && (
-                       <div className="text-center mt-2">
-                          <button onClick={() => simulateAdminCompletion(order.id)} className="text-xs text-primary underline">
-                            Simular validación admin (Demo)
-                          </button>
-                       </div>
-                    )}
-                  </div>
+                  <ActiveOrderCard 
+                    key={order.id}
+                    order={order} 
+                    onAction={(id, action) => {
+                      if (action === 'next_status') handleNextStatus(order);
+                      if (action === 'map') {
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.deliveryCoords.lat},${order.deliveryCoords.lng}`, '_blank');
+                      }
+                    }}
+                  />
                ))}
              </div>
            )}
         </div>
       )}
 
-      {activeTab === 'history' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {store.historyOrders.map(order => (
-             <OrderCard key={order.id} order={order} onAction={() => {}} variant="compact" />
-          ))}
+      {activeTab === 'pending' && (
+        <div className="text-center py-20 text-gray-600">
+          <p className="text-sm font-medium">No hay pedidos pendientes</p>
         </div>
       )}
     </div>
   );
 };
 
-// 3. Earnings (Wallet)
+// 3. History
+const History = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
+  return (
+    <div className="p-6 pb-24 max-w-lg mx-auto min-h-screen bg-background">
+      <header className="mb-8 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white">Historial de Entregas</h1>
+        <button className="p-2 text-white/80 hover:text-white transition-colors">
+          <Bell size={24} />
+        </button>
+      </header>
+
+      <div className="space-y-4">
+        {store.historyOrders.length === 0 ? (
+          <div className="text-center py-20 text-gray-600">
+            <p className="text-sm font-medium">No tienes entregas en el historial</p>
+          </div>
+        ) : (
+          store.historyOrders.map(order => (
+             <OrderCard key={order.id} order={order} onAction={() => {}} variant="compact" />
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+// 4. Earnings (Wallet)
 const Earnings = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
   const pending = store.transactions.filter(t => t.status === 'pending').reduce((acc, t) => acc + t.amount, 0);
   const withdrawn = store.transactions.filter(t => t.type === 'withdrawal' && t.status === 'completed').reduce((acc, t) => acc + t.amount, 0);
@@ -973,7 +950,7 @@ const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = window.location.hash.includes('#') ? () => {} : null;
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -981,54 +958,334 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background relative overflow-hidden">
-       {/* Background accent */}
-       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/10 via-background to-background pointer-events-none"></div>
-
-       <div className="w-full max-w-sm z-10 bg-surface/50 p-8 rounded-2xl border border-surfaceHighlight backdrop-blur-sm shadow-2xl">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background relative overflow-hidden">
+       <div className="w-full max-w-sm z-10 flex flex-col items-center">
           <div className="text-center mb-10">
-             <div className="w-20 h-20 bg-primary rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-orange-500/30 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
-               <Map size={40} className="text-white" />
+             <div className="w-20 h-20 bg-surfaceHighlight rounded-full mx-auto mb-6 flex items-center justify-center shadow-xl border border-white/5">
+               <Bike size={40} className="text-primary" />
              </div>
-             <h1 className="text-3xl font-bold text-white mb-2">Merqba Delivery</h1>
-             <p className="text-textMuted">Gestión de entregas para conductores</p>
+             <h1 className="text-4xl font-bold text-white mb-2">
+               Merqba <span className="text-primary">Delivery</span>
+             </h1>
+             <p className="text-textMuted text-sm">Gestiona tus entregas con facilidad</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="w-full space-y-6">
              <div className="space-y-2">
-                <label className="text-sm font-medium text-textMuted ml-1">Correo electrónico</label>
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-surface border border-surfaceHighlight rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-primary transition-colors"
-                  placeholder="nombre@merqba.com"
-                />
+                <label className="text-sm font-medium text-white ml-1">Correo electrónico</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-textMuted" size={18} />
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-surface/50 border border-surfaceHighlight rounded-xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-primary transition-all"
+                    placeholder="tu@ejemplo.com"
+                  />
+                </div>
              </div>
+             
              <div className="space-y-2">
-                <label className="text-sm font-medium text-textMuted ml-1">Contraseña</label>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-surface border border-surfaceHighlight rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-primary transition-colors"
-                  placeholder="••••••••"
-                />
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-sm font-medium text-white">Contraseña</label>
+                  <a href="#" className="text-xs text-primary hover:underline font-medium">¿Olvidaste tu contraseña?</a>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-textMuted" size={18} />
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-surface/50 border border-surfaceHighlight rounded-xl pl-12 pr-12 py-4 text-white focus:outline-none focus:border-primary transition-all"
+                    placeholder="........"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-textMuted hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
              </div>
 
-             <div className="flex justify-end pt-1">
-                <a href="#" className="text-sm text-primary hover:underline">¿Olvidaste tu contraseña?</a>
-             </div>
-
-             <button type="submit" className="w-full bg-primary hover:bg-primaryHover text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-900/50 transition-all active:scale-[0.98]">
+             <button type="submit" className="w-full bg-primary hover:bg-primaryHover text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] text-lg">
                Iniciar Sesión
              </button>
           </form>
 
-          <p className="mt-8 text-center text-textMuted text-sm">
-            ¿No tienes cuenta? <a href="#" className="text-white font-medium hover:underline">Regístrate aquí</a>
+          <div className="w-full mt-10">
+            <div className="relative flex items-center justify-center mb-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-surfaceHighlight"></div>
+              </div>
+              <span className="relative px-4 bg-background text-textMuted text-sm">O continúa con</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button className="flex items-center justify-center gap-2 bg-surface/50 border border-surfaceHighlight rounded-xl py-3.5 text-white hover:bg-surfaceHighlight transition-colors">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+                <span className="text-sm font-medium">Google</span>
+              </button>
+              <button className="flex items-center justify-center gap-2 bg-surface/50 border border-surfaceHighlight rounded-xl py-3.5 text-white hover:bg-surfaceHighlight transition-colors">
+                <div className="w-5 h-5 flex items-center justify-center">
+                  <svg viewBox="0 0 384 512" className="w-4 h-4 fill-current"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+                </div>
+                <span className="text-sm font-medium">Apple</span>
+              </button>
+            </div>
+          </div>
+
+          <p className="mt-12 text-center text-textMuted text-sm">
+            ¿No tienes cuenta? <button onClick={() => window.location.hash = '#/register'} className="text-primary font-bold hover:underline ml-1">Regístrate aquí</button>
+          </p>
+
+          <p className="mt-16 text-[10px] text-textMuted tracking-widest uppercase opacity-50">
+            © 2024 MERQBA DELIVERY. TODOS LOS DERECHOS RESERVADOS.
           </p>
        </div>
+    </div>
+  );
+};
+
+// 6. Register Layout
+const Register = () => {
+  const [step, setStep] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Step 1 Data
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Step 2 Data
+  const [vehicleType, setVehicleType] = useState('');
+  const [licensePlate, setLicensePlate] = useState('');
+  const [document, setDocument] = useState<File | null>(null);
+
+  const handleNext = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (step === 1) setStep(2);
+    else {
+      // Finalize registration
+      alert('Registro completado con éxito. Tu cuenta está en proceso de activación.');
+      window.location.hash = '#/login';
+    }
+  };
+
+  const handleBack = () => {
+    if (step === 2) setStep(1);
+    else window.location.hash = '#/login';
+  };
+
+  return (
+    <div className="min-h-screen bg-background text-white flex flex-col">
+      {/* Header */}
+      <header className="p-6 flex items-center gap-4 border-b border-surfaceHighlight/30">
+        <button onClick={handleBack} className="p-2 hover:bg-surfaceHighlight rounded-full transition-colors">
+          <ArrowLeft size={24} />
+        </button>
+        <h1 className="text-xl font-bold">
+          {step === 1 ? 'Registro de Conductor' : 'Professional Registration'}
+        </h1>
+      </header>
+
+      <div className="flex-1 p-6 max-w-md mx-auto w-full">
+        {/* Progress */}
+        <div className="mb-8">
+          <div className="flex justify-between items-end mb-2">
+            <div>
+              <p className="text-primary text-[10px] font-bold uppercase tracking-wider mb-1">
+                {step === 1 ? 'PASO 1 DE 2' : 'Step 2 of 2'}
+              </p>
+              <h2 className="text-3xl font-bold">
+                {step === 1 ? 'Información Personal' : 'Vehicle Information'}
+              </h2>
+            </div>
+            <span className="text-textMuted text-sm font-medium">{step === 1 ? '50%' : '100%'}</span>
+          </div>
+          <div className="w-full bg-surfaceHighlight rounded-full h-1.5 overflow-hidden">
+            <div 
+              className="bg-primary h-full transition-all duration-500 ease-out" 
+              style={{ width: step === 1 ? '50%' : '100%' }}
+            ></div>
+          </div>
+          <p className="mt-4 text-textMuted text-sm leading-relaxed">
+            {step === 1 
+              ? 'Completa tus datos básicos para comenzar tu proceso de activación.' 
+              : 'Tell us about your transport to complete the setup.'}
+          </p>
+        </div>
+
+        <form onSubmit={handleNext} className="space-y-6">
+          {step === 1 ? (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white ml-1">Nombre Completo</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-textMuted" size={18} />
+                  <input 
+                    type="text" 
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-surface/50 border border-surfaceHighlight rounded-xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-primary transition-all"
+                    placeholder="Ej. Juan Pérez"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white ml-1">Correo Electrónico</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-textMuted" size={18} />
+                  <input 
+                    type="email" 
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-surface/50 border border-surfaceHighlight rounded-xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-primary transition-all"
+                    placeholder="juan@ejemplo.com"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white ml-1">Número de Teléfono</label>
+                <div className="relative">
+                  <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-textMuted" size={18} />
+                  <input 
+                    type="tel" 
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-surface/50 border border-surfaceHighlight rounded-xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-primary transition-all"
+                    placeholder="+52 000 000 0000"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white ml-1">Contraseña</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-textMuted" size={18} />
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-surface/50 border border-surfaceHighlight rounded-xl pl-12 pr-12 py-4 text-white focus:outline-none focus:border-primary transition-all"
+                    placeholder="........"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-textMuted hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white ml-1">Confirmar Contraseña</label>
+                <div className="relative">
+                  <RotateCcw className="absolute left-4 top-1/2 -translate-y-1/2 text-textMuted" size={18} />
+                  <input 
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-surface/50 border border-surfaceHighlight rounded-xl pl-12 pr-12 py-4 text-white focus:outline-none focus:border-primary transition-all"
+                    placeholder="........"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-textMuted hover:text-white transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-textMuted uppercase tracking-wider ml-1">VEHICLE TYPE</label>
+                <div className="relative">
+                  <select 
+                    required
+                    value={vehicleType}
+                    onChange={(e) => setVehicleType(e.target.value)}
+                    className="w-full bg-surface/50 border border-surfaceHighlight rounded-xl px-4 py-4 text-white focus:outline-none focus:border-primary appearance-none transition-all"
+                  >
+                    <option value="" disabled className="bg-surface">Select your vehicle</option>
+                    <option value="bike" className="bg-surface">Bicycle / Electric Scooter</option>
+                    <option value="motorcycle" className="bg-surface">Motorcycle</option>
+                    <option value="car" className="bg-surface">Car</option>
+                    <option value="truck" className="bg-surface">Truck / Van</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-textMuted">
+                    <ChevronRight size={18} className="rotate-90" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-textMuted uppercase tracking-wider ml-1">LICENSE PLATE NUMBER</label>
+                <input 
+                  type="text" 
+                  required
+                  value={licensePlate}
+                  onChange={(e) => setLicensePlate(e.target.value)}
+                  className="w-full bg-surface/50 border border-surfaceHighlight rounded-xl px-4 py-4 text-white focus:outline-none focus:border-primary transition-all"
+                  placeholder="ABC-1234"
+                />
+              </div>
+
+              <div className="space-y-4 pt-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <CheckCircle2 size={20} />
+                  <h3 className="font-bold">Document Verification</h3>
+                </div>
+                <p className="text-textMuted text-sm">Please upload a clear photo of your professional license or ID card.</p>
+                
+                <div className="relative group">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => setDocument(e.target.files?.[0] || null)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="border-2 border-dashed border-primary/30 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/5 group-hover:bg-primary/10 transition-all">
+                    <div className="w-16 h-16 bg-surfaceHighlight rounded-full flex items-center justify-center mb-4 text-primary">
+                      <Camera size={32} />
+                    </div>
+                    <p className="text-white font-bold mb-1">Click to upload photo</p>
+                    <p className="text-textMuted text-xs">JPG, PNG up to 5MB</p>
+                    {document && (
+                      <p className="mt-4 text-success text-xs font-medium flex items-center gap-1">
+                        <CheckCircle2 size={12} /> {document.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="pt-6">
+            <button type="submit" className="w-full bg-primary hover:bg-primaryHover text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-lg">
+              {step === 1 ? 'siguiente' : 'Finalizar Registro'}
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
@@ -1120,9 +1377,10 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/" element={<Layout store={store}><Dashboard store={store} /></Layout>} />
         <Route path="/my-orders" element={<Layout store={store}><MyOrders store={store} /></Layout>} />
-        <Route path="/history" element={<Layout store={store}><MyOrders store={store} /></Layout>} />
+        <Route path="/history" element={<Layout store={store}><History store={store} /></Layout>} />
         <Route path="/earnings" element={<Layout store={store}><Earnings store={store} /></Layout>} />
         <Route path="/profile" element={<Layout store={store}><Profile store={store} /></Layout>} />
       </Routes>

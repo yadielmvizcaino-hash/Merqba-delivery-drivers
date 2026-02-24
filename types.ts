@@ -33,6 +33,7 @@ export interface Order {
   status: OrderStatus;
   earnings: number; // USD
   pickupAddress: string;
+  storeName?: string;
   pickupCoords: Coordinates;
   deliveryAddress: string;
   deliveryCoords: Coordinates;

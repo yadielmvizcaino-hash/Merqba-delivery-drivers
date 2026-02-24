@@ -27,6 +27,7 @@ export const MOCK_ORDERS: Order[] = [
     status: OrderStatus.PENDING,
     earnings: 15.50,
     pickupAddress: 'Almacén Central, Calle 23 #456, Vedado, La Habana',
+    storeName: 'Almacén Central',
     pickupCoords: { lat: 23.1368, lng: -82.3816 }, // Vedado
     deliveryAddress: 'Calle 10 #202 e/ 9 y 11, Miramar, Playa',
     deliveryCoords: { lat: 23.1189, lng: -82.4223 }, // Miramar
@@ -54,6 +55,7 @@ export const MOCK_ORDERS: Order[] = [
     status: OrderStatus.PENDING,
     earnings: 5.00,
     pickupAddress: 'Tienda Electro, Obispo #302, Habana Vieja',
+    storeName: 'Tienda Electro',
     pickupCoords: { lat: 23.1386, lng: -82.3552 }, // Habana Vieja
     deliveryAddress: 'Calle San Lázaro #567, Centro Habana',
     deliveryCoords: { lat: 23.1404, lng: -82.3734 }, // Centro Habana
@@ -78,6 +80,7 @@ export const MOCK_ORDERS: Order[] = [
     status: OrderStatus.PENDING,
     earnings: 8.75,
     pickupAddress: 'Mercado 3ra y 70, Playa',
+    storeName: 'Mercado 3ra y 70',
     pickupCoords: { lat: 23.1044, lng: -82.4385 },
     deliveryAddress: 'Ave 31 #4402, Marianao',
     deliveryCoords: { lat: 23.0855, lng: -82.4285 },
