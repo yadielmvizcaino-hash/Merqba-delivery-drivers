@@ -617,10 +617,10 @@ const OperatingZonesModal = ({
 }) => {
   const [pickupZones, setPickupZones] = useState<string[]>(currentZones?.pickupMunicipalities || []);
   const [deliveryZones, setDeliveryZones] = useState<string[]>(currentZones?.deliveryMunicipalities || []);
-  const [selectedProvince, setSelectedProvince] = useState<string>(CUBA_GEOGRAPHY[0].name);
+  const [selectedProvince, setSelectedProvince] = useState<string | 'all'>(CUBA_GEOGRAPHY[0].name);
   const [activeType, setActiveType] = useState<'pickup' | 'delivery'>('pickup');
 
-  const province = CUBA_GEOGRAPHY.find(p => p.name === selectedProvince);
+  const province = selectedProvince === 'all' ? null : CUBA_GEOGRAPHY.find(p => p.name === selectedProvince);
 
   const toggleZone = (municipality: string) => {
     if (activeType === 'pickup') {
@@ -631,6 +631,38 @@ const OperatingZonesModal = ({
       setDeliveryZones(prev => 
         prev.includes(municipality) ? prev.filter(m => m !== municipality) : [...prev, municipality]
       );
+    }
+  };
+
+  const selectAllInProvince = () => {
+    if (!province) {
+      // Select all in country
+      const allMuncipalities = CUBA_GEOGRAPHY.flatMap(p => p.municipalities);
+      if (activeType === 'pickup') setPickupZones(allMuncipalities);
+      else setDeliveryZones(allMuncipalities);
+      return;
+    }
+    
+    const municipalities = province.municipalities;
+    if (activeType === 'pickup') {
+      setPickupZones(prev => Array.from(new Set([...prev, ...municipalities])));
+    } else {
+      setDeliveryZones(prev => Array.from(new Set([...prev, ...municipalities])));
+    }
+  };
+
+  const clearAllInProvince = () => {
+    if (!province) {
+      if (activeType === 'pickup') setPickupZones([]);
+      else setDeliveryZones([]);
+      return;
+    }
+
+    const municipalities = province.municipalities;
+    if (activeType === 'pickup') {
+      setPickupZones(prev => prev.filter(m => !municipalities.includes(m)));
+    } else {
+      setDeliveryZones(prev => prev.filter(m => !deliveryZones.includes(m)));
     }
   };
 
@@ -668,6 +700,12 @@ const OperatingZonesModal = ({
           {/* Province Selector */}
           <div className="w-full md:w-1/3 border-r border-surfaceHighlight overflow-y-auto bg-black/10 p-2 space-y-1">
             <p className="text-[10px] font-bold text-textMuted uppercase px-3 py-2">Provincias</p>
+            <button
+              onClick={() => setSelectedProvince('all')}
+              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm transition-all ${selectedProvince === 'all' ? 'bg-primary text-white font-medium shadow-md shadow-orange-900/20' : 'text-textMuted hover:bg-white/5 hover:text-white'}`}
+            >
+              Todas las provincias
+            </button>
             {CUBA_GEOGRAPHY.map(p => (
               <button
                 key={p.name}
@@ -681,21 +719,36 @@ const OperatingZonesModal = ({
 
           {/* Municipality Selector */}
           <div className="flex-1 overflow-y-auto p-4">
-            <p className="text-[10px] font-bold text-textMuted uppercase mb-4">Municipios de {selectedProvince}</p>
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-[10px] font-bold text-textMuted uppercase">
+                {selectedProvince === 'all' ? 'Todos los municipios' : `Municipios de ${selectedProvince}`}
+              </p>
+              <div className="flex gap-2">
+                <button onClick={selectAllInProvince} className="text-[10px] text-primary hover:underline font-bold">Seleccionar Todo</button>
+                <button onClick={clearAllInProvince} className="text-[10px] text-textMuted hover:underline font-bold">Limpiar</button>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {province?.municipalities.map(m => {
-                const isSelected = activeType === 'pickup' ? pickupZones.includes(m) : deliveryZones.includes(m);
-                return (
-                  <button
-                    key={m}
-                    onClick={() => toggleZone(m)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${isSelected ? 'bg-primary/10 border-primary text-primary font-medium' : 'bg-surfaceHighlight/30 border-transparent text-textMuted hover:border-gray-600'}`}
-                  >
-                    <span>{m}</span>
-                    {isSelected && <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.6)]"></div>}
-                  </button>
-                );
-              })}
+              {selectedProvince === 'all' ? (
+                <div className="col-span-full py-10 text-center">
+                  <p className="text-sm text-textMuted italic">Selecciona una provincia para ver municipios específicos o usa "Seleccionar Todo" para marcar todo el país.</p>
+                </div>
+              ) : (
+                province?.municipalities.map(m => {
+                  const isSelected = activeType === 'pickup' ? pickupZones.includes(m) : deliveryZones.includes(m);
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => toggleZone(m)}
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${isSelected ? 'bg-primary/10 border-primary text-primary font-medium' : 'bg-surfaceHighlight/30 border-transparent text-textMuted hover:border-gray-600'}`}
+                    >
+                      <span>{m}</span>
+                      {isSelected && <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.6)]"></div>}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -711,6 +764,15 @@ const OperatingZonesModal = ({
             </p>
           </div>
           <div className="flex gap-3">
+            <button 
+              onClick={() => {
+                setPickupZones([]);
+                setDeliveryZones([]);
+              }}
+              className="px-4 py-2.5 rounded-xl text-xs font-medium text-primary hover:bg-primary/10 transition-colors border border-primary/20"
+            >
+              Restablecer a Todo el País
+            </button>
             <button 
               onClick={onClose}
               className="px-6 py-2.5 rounded-xl text-sm font-medium text-textMuted hover:text-white transition-colors"

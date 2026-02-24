@@ -15,8 +15,8 @@ export const MOCK_DRIVER: DriverProfile = {
   totalEarned: 1195.00,
   cardNumber: '9200 1234 5678 9010',
   operatingZones: {
-    pickupMunicipalities: ['Plaza de la Revolución', 'Habana Vieja'],
-    deliveryMunicipalities: ['Playa', 'Centro Habana', 'Miramar']
+    pickupMunicipalities: [], // Empty means "All" by default
+    deliveryMunicipalities: []
   }
 };
 
