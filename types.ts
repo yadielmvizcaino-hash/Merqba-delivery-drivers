@@ -44,6 +44,8 @@ export interface Order {
   createdAt: string;
   weight?: string;
   zone?: string;
+  pickupMunicipality?: string;
+  deliveryMunicipality?: string;
 }
 
 export interface DriverProfile {
@@ -60,6 +62,10 @@ export interface DriverProfile {
   balance: number; // Current available balance
   totalEarned: number; // Lifetime
   cardNumber?: string; // For withdrawals
+  operatingZones?: {
+    pickupMunicipalities: string[];
+    deliveryMunicipalities: string[];
+  };
 }
 
 export interface Transaction {

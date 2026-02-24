@@ -5,8 +5,9 @@ import { Sidebar } from './components/Sidebar';
 import { OrderCard } from './components/OrderCard';
 import { MOCK_DRIVER, MOCK_ORDERS, MOCK_TRANSACTIONS } from './services/mockData';
 import { DriverProfile, Order, OrderStatus, Transaction } from './types';
-import { Filter, RefreshCw, Star, LogOut, ChevronRight, Settings, Trash2, Map, DollarSign, ArrowUpRight, TrendingUp, TrendingDown, Wallet, Clock, Box, Package, X, Search, Menu } from 'lucide-react';
+import { Filter, RefreshCw, Star, LogOut, ChevronRight, Settings, Trash2, Map, DollarSign, ArrowUpRight, TrendingUp, TrendingDown, Wallet, Clock, Box, Package, X, Search, Menu, MapPin, Navigation } from 'lucide-react';
 import { getUnifiedRouteUrl } from './utils/maps';
+import { CUBA_GEOGRAPHY } from './constants/cuba';
 
 // --- State Management Simulation (Hook) ---
 // In a real app, this would be Zustand or Redux
@@ -138,6 +139,19 @@ const Dashboard = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
 
   const filteredOrders = useMemo(() => {
     return store.availableOrders.filter(order => {
+      // 0. Pre-filter by Driver's Operating Zones (if set)
+      if (store.driver.operatingZones) {
+        const { pickupMunicipalities, deliveryMunicipalities } = store.driver.operatingZones;
+        
+        const matchesPickup = pickupMunicipalities.length === 0 || 
+          (order.pickupMunicipality && pickupMunicipalities.includes(order.pickupMunicipality));
+        
+        const matchesDelivery = deliveryMunicipalities.length === 0 || 
+          (order.deliveryMunicipality && deliveryMunicipalities.includes(order.deliveryMunicipality));
+
+        if (!matchesPickup || !matchesDelivery) return false;
+      }
+
       // 1. Text Search (Master Search)
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -588,14 +602,150 @@ const Earnings = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
   );
 };
 
+// --- Sub-components ---
+
+const OperatingZonesModal = ({ 
+  isOpen, 
+  onClose, 
+  currentZones, 
+  onSave 
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  currentZones: DriverProfile['operatingZones'], 
+  onSave: (newZones: DriverProfile['operatingZones']) => void 
+}) => {
+  const [pickupZones, setPickupZones] = useState<string[]>(currentZones?.pickupMunicipalities || []);
+  const [deliveryZones, setDeliveryZones] = useState<string[]>(currentZones?.deliveryMunicipalities || []);
+  const [selectedProvince, setSelectedProvince] = useState<string>(CUBA_GEOGRAPHY[0].name);
+  const [activeType, setActiveType] = useState<'pickup' | 'delivery'>('pickup');
+
+  const province = CUBA_GEOGRAPHY.find(p => p.name === selectedProvince);
+
+  const toggleZone = (municipality: string) => {
+    if (activeType === 'pickup') {
+      setPickupZones(prev => 
+        prev.includes(municipality) ? prev.filter(m => m !== municipality) : [...prev, municipality]
+      );
+    } else {
+      setDeliveryZones(prev => 
+        prev.includes(municipality) ? prev.filter(m => m !== municipality) : [...prev, municipality]
+      );
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-surface border border-surfaceHighlight w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-6 border-b border-surfaceHighlight flex justify-between items-center bg-surfaceHighlight/30">
+          <div>
+            <h2 className="text-xl font-bold text-white">Zonas Operativas</h2>
+            <p className="text-xs text-textMuted">Configura tus municipios de recogida y entrega</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <X size={20} className="text-textMuted" />
+          </button>
+        </div>
+
+        <div className="flex border-b border-surfaceHighlight">
+          <button 
+            onClick={() => setActiveType('pickup')}
+            className={`flex-1 py-4 text-sm font-semibold transition-all border-b-2 ${activeType === 'pickup' ? 'border-primary text-primary bg-primary/5' : 'border-transparent text-textMuted hover:text-white'}`}
+          >
+            Puntos de Recogida ({pickupZones.length})
+          </button>
+          <button 
+            onClick={() => setActiveType('delivery')}
+            className={`flex-1 py-4 text-sm font-semibold transition-all border-b-2 ${activeType === 'delivery' ? 'border-primary text-primary bg-primary/5' : 'border-transparent text-textMuted hover:text-white'}`}
+          >
+            Zonas de Entrega ({deliveryZones.length})
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+          {/* Province Selector */}
+          <div className="w-full md:w-1/3 border-r border-surfaceHighlight overflow-y-auto bg-black/10 p-2 space-y-1">
+            <p className="text-[10px] font-bold text-textMuted uppercase px-3 py-2">Provincias</p>
+            {CUBA_GEOGRAPHY.map(p => (
+              <button
+                key={p.name}
+                onClick={() => setSelectedProvince(p.name)}
+                className={`w-full text-left px-4 py-2.5 rounded-lg text-sm transition-all ${selectedProvince === p.name ? 'bg-primary text-white font-medium shadow-md shadow-orange-900/20' : 'text-textMuted hover:bg-white/5 hover:text-white'}`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Municipality Selector */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <p className="text-[10px] font-bold text-textMuted uppercase mb-4">Municipios de {selectedProvince}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {province?.municipalities.map(m => {
+                const isSelected = activeType === 'pickup' ? pickupZones.includes(m) : deliveryZones.includes(m);
+                return (
+                  <button
+                    key={m}
+                    onClick={() => toggleZone(m)}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${isSelected ? 'bg-primary/10 border-primary text-primary font-medium' : 'bg-surfaceHighlight/30 border-transparent text-textMuted hover:border-gray-600'}`}
+                  >
+                    <span>{m}</span>
+                    {isSelected && <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.6)]"></div>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-surfaceHighlight bg-surfaceHighlight/10 flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <p className="text-[10px] text-textMuted uppercase font-bold mb-1">Resumen</p>
+            <p className="text-xs text-white truncate">
+              {activeType === 'pickup' 
+                ? `Recogida: ${pickupZones.length > 0 ? pickupZones.join(', ') : 'Ninguno'}`
+                : `Entrega: ${deliveryZones.length > 0 ? deliveryZones.join(', ') : 'Ninguno'}`
+              }
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button 
+              onClick={onClose}
+              className="px-6 py-2.5 rounded-xl text-sm font-medium text-textMuted hover:text-white transition-colors"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={() => {
+                onSave({ pickupMunicipalities: pickupZones, deliveryMunicipalities: deliveryZones });
+                onClose();
+              }}
+              className="px-8 py-2.5 bg-primary hover:bg-primaryHover text-white rounded-xl text-sm font-bold shadow-lg shadow-orange-900/20 transition-all active:scale-95"
+            >
+              Guardar Cambios
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // 4. Profile
 const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
   const [editing, setEditing] = useState(false);
+  const [showZonesModal, setShowZonesModal] = useState(false);
   const [tempCard, setTempCard] = useState(store.driver.cardNumber || '');
 
   const saveCard = () => {
     store.setDriver(prev => ({ ...prev, cardNumber: tempCard }));
     setEditing(false);
+  };
+
+  const saveZones = (newZones: DriverProfile['operatingZones']) => {
+    store.setDriver(prev => ({ ...prev, operatingZones: newZones }));
   };
 
   return (
@@ -604,7 +754,7 @@ const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
         
         {/* Profile Card */}
         <div className="md:col-span-1">
-          <div className="bg-primary rounded-xl p-6 text-center text-white relative h-full">
+          <div className="bg-primary rounded-xl p-6 text-center text-white relative h-full flex flex-col">
              <div className="absolute top-4 right-4">
                 <button className="p-2 bg-white/20 rounded-full hover:bg-white/30">
                    <Settings size={18} />
@@ -622,29 +772,78 @@ const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
                 <span>{store.driver.rating.toFixed(1)} ({store.driver.totalRatings})</span>
              </div>
              
-             {!editing ? (
-               <button onClick={() => setEditing(true)} className="w-full mt-auto px-4 py-3 bg-surface text-white text-sm font-medium rounded-lg border border-surfaceHighlight/50 hover:bg-surfaceHighlight transition-colors">
-                 Editar datos bancarios
+             <div className="space-y-3 mt-auto">
+               {!editing ? (
+                 <button onClick={() => setEditing(true)} className="w-full px-4 py-3 bg-surface text-white text-sm font-medium rounded-lg border border-surfaceHighlight/50 hover:bg-surfaceHighlight transition-colors">
+                   Editar datos bancarios
+                 </button>
+               ) : (
+                 <div className="bg-surface p-4 rounded-lg text-left">
+                    <label className="text-xs text-textMuted mb-1 block">Tarjeta USD</label>
+                    <input 
+                      value={tempCard}
+                      onChange={(e) => setTempCard(e.target.value)}
+                      className="w-full bg-surfaceHighlight border border-gray-600 rounded p-2 text-sm text-white mb-3 focus:outline-none focus:border-white/50"
+                    />
+                    <div className="flex gap-2">
+                       <button onClick={saveCard} className="flex-1 bg-white text-primary py-1.5 rounded text-sm font-medium">Guardar</button>
+                       <button onClick={() => setEditing(false)} className="flex-1 bg-transparent border border-gray-500 py-1.5 rounded text-sm font-medium">Cancelar</button>
+                    </div>
+                 </div>
+               )}
+
+               <button 
+                 onClick={() => setShowZonesModal(true)}
+                 className="w-full px-4 py-3 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2"
+               >
+                 <MapPin size={16} />
+                 Zonas operativas
                </button>
-             ) : (
-               <div className="mt-4 bg-surface p-4 rounded-lg text-left">
-                  <label className="text-xs text-textMuted mb-1 block">Tarjeta USD</label>
-                  <input 
-                    value={tempCard}
-                    onChange={(e) => setTempCard(e.target.value)}
-                    className="w-full bg-surfaceHighlight border border-gray-600 rounded p-2 text-sm text-white mb-3 focus:outline-none focus:border-white/50"
-                  />
-                  <div className="flex gap-2">
-                     <button onClick={saveCard} className="flex-1 bg-white text-primary py-1.5 rounded text-sm font-medium">Guardar</button>
-                     <button onClick={() => setEditing(false)} className="flex-1 bg-transparent border border-gray-500 py-1.5 rounded text-sm font-medium">Cancelar</button>
-                  </div>
-               </div>
-             )}
+             </div>
           </div>
         </div>
 
         {/* Stats & Actions */}
         <div className="md:col-span-2 space-y-6">
+          {/* Operating Zones Summary */}
+          <div className="bg-surface border border-surfaceHighlight rounded-xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-white flex items-center gap-2">
+                <Navigation size={18} className="text-primary" />
+                Zonas de Operación
+              </h3>
+              <button onClick={() => setShowZonesModal(true)} className="text-xs text-primary hover:underline">Configurar</button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-surfaceHighlight/30 p-4 rounded-xl border border-surfaceHighlight/50">
+                <p className="text-[10px] text-textMuted uppercase font-bold mb-2">Puntos de Recogida</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {store.driver.operatingZones?.pickupMunicipalities.length ? (
+                    store.driver.operatingZones.pickupMunicipalities.map(m => (
+                      <span key={m} className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded border border-primary/20">{m}</span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-textMuted italic">Todos los municipios</span>
+                  )}
+                </div>
+              </div>
+              <div className="bg-surfaceHighlight/30 p-4 rounded-xl border border-surfaceHighlight/50">
+                <p className="text-[10px] text-textMuted uppercase font-bold mb-2">Zonas de Entrega</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {store.driver.operatingZones?.deliveryMunicipalities.length ? (
+                    store.driver.operatingZones.deliveryMunicipalities.map(m => (
+                      <span key={m} className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[10px] rounded border border-blue-500/20">{m}</span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-textMuted italic">Todos los municipios</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-textMuted mt-4 italic">El panel principal filtrará automáticamente los pedidos según estas zonas.</p>
+          </div>
+
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-surface p-4 rounded-xl border border-surfaceHighlight hover:bg-surfaceHighlight/30 transition-colors">
@@ -696,6 +895,14 @@ const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
           </div>
         </div>
       </div>
+      
+      {/* Modals */}
+      <OperatingZonesModal 
+        isOpen={showZonesModal}
+        onClose={() => setShowZonesModal(false)}
+        currentZones={store.driver.operatingZones}
+        onSave={saveZones}
+      />
     </div>
   );
 };

@@ -13,7 +13,11 @@ export const MOCK_DRIVER: DriverProfile = {
   averageTime: '32 min',
   balance: 0.00, // Calculated dynamically in app state usually, but initial here
   totalEarned: 1195.00,
-  cardNumber: '9200 1234 5678 9010'
+  cardNumber: '9200 1234 5678 9010',
+  operatingZones: {
+    pickupMunicipalities: ['Plaza de la Revolución', 'Habana Vieja'],
+    deliveryMunicipalities: ['Playa', 'Centro Habana', 'Miramar']
+  }
 };
 
 export const MOCK_ORDERS: Order[] = [
@@ -40,7 +44,9 @@ export const MOCK_ORDERS: Order[] = [
     distance: '4.2 km',
     createdAt: new Date().toISOString(),
     weight: '3.5 kg',
-    zone: 'Playa'
+    zone: 'Playa',
+    pickupMunicipality: 'Plaza de la Revolución',
+    deliveryMunicipality: 'Playa'
   },
   {
     id: '2',
@@ -62,7 +68,9 @@ export const MOCK_ORDERS: Order[] = [
     distance: '1.8 km',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     weight: '0.2 kg',
-    zone: 'Centro Habana'
+    zone: 'Centro Habana',
+    pickupMunicipality: 'Habana Vieja',
+    deliveryMunicipality: 'Centro Habana'
   },
   {
     id: '3',
@@ -85,7 +93,9 @@ export const MOCK_ORDERS: Order[] = [
     distance: '3.1 km',
     createdAt: new Date(Date.now() - 7200000).toISOString(),
     weight: '5.0 kg',
-    zone: 'Marianao'
+    zone: 'Marianao',
+    pickupMunicipality: 'Playa',
+    deliveryMunicipality: 'Marianao'
   }
 ];
 
