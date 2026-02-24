@@ -394,14 +394,29 @@ const MyOrders = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
   };
 
   const handleUnifyRoute = () => {
-    const currentLoc = { lat: 23.1368, lng: -82.3816 }; 
-    const waypoints = store.activeOrders.flatMap(o => [
-      { coords: o.pickupCoords, type: 'pickup' as const },
-      { coords: o.deliveryCoords, type: 'delivery' as const }
-    ]);
-    
-    const url = getUnifiedRouteUrl(currentLoc, waypoints);
-    if (url) window.open(url, '_blank');
+    const launchMaps = (origin: { lat: number, lng: number }) => {
+      const waypoints = store.activeOrders.flatMap(o => [
+        { coords: o.pickupCoords, type: 'pickup' as const },
+        { coords: o.deliveryCoords, type: 'delivery' as const }
+      ]);
+      const url = getUnifiedRouteUrl(origin, waypoints);
+      if (url) window.open(url, '_blank');
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+           launchMaps({ lat: position.coords.latitude, lng: position.coords.longitude });
+        },
+        (error) => {
+           console.warn("Geolocation failed", error);
+           // Fallback to Havana center
+           launchMaps({ lat: 23.1136, lng: -82.3666 });
+        }
+      );
+    } else {
+      launchMaps({ lat: 23.1136, lng: -82.3666 });
+    }
   };
 
   return (
@@ -429,7 +444,7 @@ const MyOrders = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
            {store.activeOrders.length > 0 && (
              <button 
                onClick={handleUnifyRoute}
-               className="w-full md:w-auto md:px-8 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 mb-4 font-medium transition-colors ml-auto"
+               className="w-full md:w-auto md:px-8 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg flex items-center justify-center gap-2 mb-4 font-medium transition-colors ml-auto shadow-lg shadow-blue-900/20"
              >
                <Map size={18} />
                Ver ruta unificada optimizada
