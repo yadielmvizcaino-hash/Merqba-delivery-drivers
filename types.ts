@@ -49,6 +49,13 @@ export interface Order {
   deliveryMunicipality?: string;
 }
 
+export interface BusinessAffiliation {
+  businessName: string;
+  businessEmail: string;
+  businessId: string;
+  status: 'pending' | 'active' | 'none';
+}
+
 export interface DriverProfile {
   id: string;
   name: string;
@@ -67,6 +74,7 @@ export interface DriverProfile {
     pickupMunicipalities: string[];
     deliveryMunicipalities: string[];
   };
+  businessAffiliation?: BusinessAffiliation;
 }
 
 export interface Transaction {

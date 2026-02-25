@@ -20,11 +20,11 @@ const useAppStore = () => {
 
   // Derive active orders
   const activeOrders = orders.filter(o => 
-    [OrderStatus.ACCEPTED, OrderStatus.IN_TRANSIT, OrderStatus.DELIVERED].includes(o.status)
+    [OrderStatus.ACCEPTED, OrderStatus.IN_TRANSIT].includes(o.status)
   );
 
   const availableOrders = orders.filter(o => o.status === OrderStatus.PENDING);
-  const historyOrders = orders.filter(o => [OrderStatus.COMPLETED, OrderStatus.CANCELLED].includes(o.status));
+  const historyOrders = orders.filter(o => [OrderStatus.DELIVERED, OrderStatus.COMPLETED, OrderStatus.CANCELLED].includes(o.status));
 
   const refreshOrders = () => {
     setLoading(true);
@@ -103,7 +103,8 @@ const useAppStore = () => {
     cancelOrder,
     updateOrderStatus,
     requestWithdrawal,
-    setDriver
+    setDriver,
+    updateDriver: (data: Partial<DriverProfile>) => setDriver(prev => ({ ...prev, ...data }))
   };
 };
 
@@ -792,13 +793,61 @@ const OperatingZonesModal = ({
 
 // 4. Profile
 const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
-  const [editing, setEditing] = useState(false);
+  const [editingCard, setEditingCard] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editingBusiness, setEditingBusiness] = useState(false);
   const [showZonesModal, setShowZonesModal] = useState(false);
+  
+  // Form states
   const [tempCard, setTempCard] = useState(store.driver.cardNumber || '');
+  const [tempProfile, setTempProfile] = useState({
+    name: store.driver.name,
+    email: store.driver.email,
+    phone: store.driver.phone
+  });
+  const [tempBusiness, setTempBusiness] = useState({
+    businessName: store.driver.businessAffiliation?.businessName || '',
+    businessEmail: store.driver.businessAffiliation?.businessEmail || '',
+    businessId: store.driver.businessAffiliation?.businessId || ''
+  });
+
+  const MOCK_BUSINESSES = [
+    'Restaurante El Vedado',
+    'Tienda Panamericana',
+    'Cafetería 23 y L',
+    'Farmacia Central',
+    'Supermercado 3ra y 70'
+  ];
 
   const saveCard = () => {
-    store.setDriver(prev => ({ ...prev, cardNumber: tempCard }));
-    setEditing(false);
+    store.updateDriver({ cardNumber: tempCard });
+    setEditingCard(false);
+  };
+
+  const saveProfile = () => {
+    store.updateDriver(tempProfile);
+    setEditingProfile(false);
+  };
+
+  const saveBusiness = () => {
+    store.updateDriver({
+      businessAffiliation: {
+        ...tempBusiness,
+        status: 'pending'
+      }
+    });
+    setEditingBusiness(false);
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        store.updateDriver({ avatar: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const saveZones = (newZones: DriverProfile['operatingZones']) => {
@@ -817,8 +866,12 @@ const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
                    <Settings size={18} />
                 </button>
              </div>
-             <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-surface mx-auto mb-4 overflow-hidden relative shadow-xl">
+             <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-surface mx-auto mb-4 overflow-hidden relative shadow-xl group">
                 <img src={store.driver.avatar} alt="Profile" className="w-full h-full object-cover" />
+                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                  <Camera size={24} />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                </label>
                 <div className="absolute bottom-0 w-full bg-green-500 text-[10px] font-bold py-0.5">ACTIVO</div>
              </div>
              <h2 className="text-2xl font-bold">{store.driver.name}</h2>
@@ -830,8 +883,8 @@ const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
              </div>
              
              <div className="space-y-3 mt-auto">
-               {!editing ? (
-                 <button onClick={() => setEditing(true)} className="w-full px-4 py-3 bg-surface text-white text-sm font-medium rounded-lg border border-surfaceHighlight/50 hover:bg-surfaceHighlight transition-colors">
+               {!editingCard ? (
+                 <button onClick={() => setEditingCard(true)} className="w-full px-4 py-3 bg-surface text-white text-sm font-medium rounded-lg border border-surfaceHighlight/50 hover:bg-surfaceHighlight transition-colors">
                    Editar datos bancarios
                  </button>
                ) : (
@@ -844,7 +897,7 @@ const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
                     />
                     <div className="flex gap-2">
                        <button onClick={saveCard} className="flex-1 bg-white text-primary py-1.5 rounded text-sm font-medium">Guardar</button>
-                       <button onClick={() => setEditing(false)} className="flex-1 bg-transparent border border-gray-500 py-1.5 rounded text-sm font-medium">Cancelar</button>
+                       <button onClick={() => setEditingCard(false)} className="flex-1 bg-transparent border border-gray-500 py-1.5 rounded text-sm font-medium">Cancelar</button>
                     </div>
                  </div>
                )}
@@ -862,6 +915,152 @@ const Profile = ({ store }: { store: ReturnType<typeof useAppStore> }) => {
 
         {/* Stats & Actions */}
         <div className="md:col-span-2 space-y-6">
+          {/* Personal Data */}
+          <div className="bg-surface border border-surfaceHighlight rounded-xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-white flex items-center gap-2">
+                <User size={18} className="text-primary" />
+                Datos Personales
+              </h3>
+              {!editingProfile ? (
+                <button onClick={() => setEditingProfile(true)} className="text-xs text-primary hover:underline">Editar</button>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={saveProfile} className="text-xs text-green-500 hover:underline">Guardar</button>
+                  <button onClick={() => setEditingProfile(false)} className="text-xs text-textMuted hover:underline">Cancelar</button>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-[10px] text-textMuted uppercase font-bold">Nombre</p>
+                {editingProfile ? (
+                  <input 
+                    value={tempProfile.name}
+                    onChange={e => setTempProfile({...tempProfile, name: e.target.value})}
+                    className="w-full bg-surfaceHighlight border border-gray-700 rounded p-2 text-sm text-white focus:outline-none focus:border-primary"
+                  />
+                ) : (
+                  <p className="text-sm text-white">{store.driver.name}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-textMuted uppercase font-bold">Email</p>
+                {editingProfile ? (
+                  <input 
+                    value={tempProfile.email}
+                    onChange={e => setTempProfile({...tempProfile, email: e.target.value})}
+                    className="w-full bg-surfaceHighlight border border-gray-700 rounded p-2 text-sm text-white focus:outline-none focus:border-primary"
+                  />
+                ) : (
+                  <p className="text-sm text-white">{store.driver.email}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-textMuted uppercase font-bold">Teléfono</p>
+                {editingProfile ? (
+                  <input 
+                    value={tempProfile.phone}
+                    onChange={e => setTempProfile({...tempProfile, phone: e.target.value})}
+                    className="w-full bg-surfaceHighlight border border-gray-700 rounded p-2 text-sm text-white focus:outline-none focus:border-primary"
+                  />
+                ) : (
+                  <p className="text-sm text-white">{store.driver.phone}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Business Affiliation */}
+          <div className="bg-surface border border-surfaceHighlight rounded-xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-white flex items-center gap-2">
+                <Package size={18} className="text-primary" />
+                Afiliación a Negocio
+              </h3>
+              {store.driver.businessAffiliation?.status === 'active' ? (
+                <span className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[10px] rounded border border-green-500/20 font-bold uppercase">Activo</span>
+              ) : store.driver.businessAffiliation?.status === 'pending' ? (
+                <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[10px] rounded border border-yellow-500/20 font-bold uppercase">Pendiente</span>
+              ) : (
+                <button onClick={() => setEditingBusiness(true)} className="text-xs text-primary hover:underline">Afiliarse</button>
+              )}
+            </div>
+
+            {editingBusiness ? (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-textMuted uppercase font-bold">Seleccionar Negocio</label>
+                  <select 
+                    value={tempBusiness.businessName}
+                    onChange={e => setTempBusiness({...tempBusiness, businessName: e.target.value})}
+                    className="w-full bg-surfaceHighlight border border-gray-700 rounded p-2 text-sm text-white focus:outline-none focus:border-primary appearance-none"
+                  >
+                    <option value="">Selecciona un negocio...</option>
+                    {MOCK_BUSINESSES.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </div>
+                
+                {tempBusiness.businessName && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-textMuted uppercase font-bold">Email del Negocio</label>
+                      <input 
+                        type="email"
+                        value={tempBusiness.businessEmail}
+                        onChange={e => setTempBusiness({...tempBusiness, businessEmail: e.target.value})}
+                        className="w-full bg-surfaceHighlight border border-gray-700 rounded p-2 text-sm text-white focus:outline-none focus:border-primary"
+                        placeholder="negocio@ejemplo.com"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-textMuted uppercase font-bold">ID del Negocio</label>
+                      <input 
+                        value={tempBusiness.businessId}
+                        onChange={e => setTempBusiness({...tempBusiness, businessId: e.target.value})}
+                        className="w-full bg-surfaceHighlight border border-gray-700 rounded p-2 text-sm text-white focus:outline-none focus:border-primary"
+                        placeholder="ID-12345"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    onClick={saveBusiness}
+                    disabled={!tempBusiness.businessName || !tempBusiness.businessEmail || !tempBusiness.businessId}
+                    className="flex-1 bg-primary hover:bg-primaryHover disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-bold transition-all"
+                  >
+                    Enviar Solicitud
+                  </button>
+                  <button 
+                    onClick={() => setEditingBusiness(false)}
+                    className="flex-1 bg-surfaceHighlight hover:bg-gray-700 text-white py-2.5 rounded-xl text-sm font-bold transition-all"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-surfaceHighlight/30 p-4 rounded-xl border border-surfaceHighlight/50">
+                {store.driver.businessAffiliation ? (
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-bold text-white">{store.driver.businessAffiliation.businessName}</p>
+                      <p className="text-xs text-textMuted">{store.driver.businessAffiliation.businessEmail}</p>
+                    </div>
+                    <p className="text-xs font-mono text-textMuted">{store.driver.businessAffiliation.businessId}</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-2">
+                    <p className="text-xs text-textMuted italic">No estás afiliado a ningún negocio actualmente.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Operating Zones Summary */}
           <div className="bg-surface border border-surfaceHighlight rounded-xl p-6">
             <div className="flex justify-between items-center mb-4">
