@@ -47,6 +47,7 @@ export interface Order {
   zone?: string;
   pickupMunicipality?: string;
   deliveryMunicipality?: string;
+  shipmentMethod?: 'standard' | 'envío express';
 }
 
 export interface BusinessAffiliation {

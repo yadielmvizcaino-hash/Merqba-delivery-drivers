@@ -47,7 +47,8 @@ export const MOCK_ORDERS: Order[] = [
     weight: '3.5 kg',
     zone: 'Playa',
     pickupMunicipality: 'Plaza de la Revolución',
-    deliveryMunicipality: 'Playa'
+    deliveryMunicipality: 'Playa',
+    shipmentMethod: 'envío express'
   },
   {
     id: '2',

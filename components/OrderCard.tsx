@@ -54,15 +54,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onAction, actionLab
   };
 
   const itemCount = order.items.reduce((acc, item) => acc + item.quantity, 0);
+  const isExpress = order.shipmentMethod === 'envío express';
 
   return (
-    <div className="bg-surface rounded-xl border border-surfaceHighlight p-4 mb-4 shadow-sm transition-all hover:border-primary/30">
+    <div className={`rounded-xl border p-4 mb-4 shadow-sm transition-all hover:border-primary/30 ${isExpress ? 'bg-gradient-to-br from-[#6b5006] via-[#4a390a] to-[#2e240a] border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-surface border-surfaceHighlight'}`}>
       {/* Header: Earnings & ID */}
       <div className="flex justify-between items-start mb-3">
         <div>
           <h3 className="text-xl font-bold text-textMain flex items-center gap-2">
             {formatCurrency(order.earnings)}
             <span className="text-xs font-normal text-success bg-success/10 px-2 py-0.5 rounded-full">ganancia</span>
+            {isExpress && <span className="text-[10px] font-bold text-gray-900 bg-yellow-400 px-2 py-0.5 rounded-full uppercase">VIP</span>}
           </h3>
           <p className="text-xs text-textMuted mt-1">{order.orderNumber}</p>
         </div>

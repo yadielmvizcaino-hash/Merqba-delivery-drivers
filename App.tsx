@@ -787,6 +787,14 @@ const OperatingZonesModal = ({
           </div>
         </div>
       </div>
+      
+      {/* Modals */}
+      <OperatingZonesModal 
+        isOpen={showZonesModal}
+        onClose={() => setShowZonesModal(false)}
+        currentZones={store.driver.operatingZones}
+        onSave={saveZones}
+      />
     </div>
   );
 };

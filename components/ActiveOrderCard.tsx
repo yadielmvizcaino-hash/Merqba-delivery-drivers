@@ -53,8 +53,10 @@ export const ActiveOrderCard: React.FC<ActiveOrderCardProps> = ({ order, onActio
     window.open(`https://wa.me/${phone}`, '_blank');
   };
 
+  const isExpress = order.shipmentMethod === 'envío express';
+
   return (
-    <div className="bg-[#1a222e] rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+    <div className={`rounded-3xl border shadow-2xl overflow-hidden ${isExpress ? 'bg-gradient-to-br from-[#6b5006] via-[#4a390a] to-[#2e240a] border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'bg-[#1a222e] border-white/5'}`}>
       {/* Header */}
       <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -64,6 +66,7 @@ export const ActiveOrderCard: React.FC<ActiveOrderCardProps> = ({ order, onActio
           <div>
             <p className="text-yellow-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-0.5">
               PEDIDO {order.orderNumber}
+              {isExpress && <span className="ml-2 text-[10px] font-bold text-gray-900 bg-yellow-400 px-2 py-0.5 rounded-full uppercase">VIP</span>}
             </p>
             <h3 className="text-white font-bold">{order.storeName || 'Market Central'}</h3>
           </div>
